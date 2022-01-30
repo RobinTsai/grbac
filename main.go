@@ -9,41 +9,45 @@ import (
 )
 
 const (
-	searchDirFlag  = "dir"
-	outputDirFlag  = "output"
-	parseDepthFlag = "parseDepth"
-	mainFileFlag   = "mainFile"
-	outputVarFlag  = "variable"
+	searchDirFlag    = "dir"
+	outputDirFlag    = "outDir"
+	parseDepthFlag   = "parseDepth"
+	excludeFilesFlag = "excludeFiles"
+	outputFileFlag   = "output"
+	formatFlag       = "format"
 )
 
 var initFlags = []cli.Flag{
 	&cli.StringFlag{
-		Name:    searchDirFlag,
-		Aliases: []string{"d"},
-		Value:   "./",
-		Usage:   "Directory you want to parse",
+		Name:  searchDirFlag,
+		Value: "./",
+		Usage: "Directory you want to parse",
 	},
 	&cli.StringFlag{
-		Name:    outputDirFlag,
-		Aliases: []string{"o"},
-		Value:   "./docs",
-		Usage:   "Directory you want to output.",
+		Name:  outputDirFlag,
+		Value: "./",
+		Usage: "Directory you want to output.",
 	},
 	&cli.IntFlag{
 		Name:  parseDepthFlag,
 		Usage: "Depth you want to scan go files",
 		Value: 3,
 	},
-	&cli.StringFlag{
-		Name:  mainFileFlag,
-		Value: "main.go",
-		Usage: "Main file name",
+	&cli.StringSliceFlag{
+		Name:  excludeFilesFlag,
+		Usage: "Which files/folders to be excludes",
+		Value: nil,
 	},
 	&cli.StringFlag{
-		Name:    outputVarFlag,
-		Aliases: []string{"v"},
-		Value:   "permissionStr",
-		Usage:   "The variable of permission config string",
+		Name:    outputFileFlag,
+		Aliases: []string{"o"},
+		Usage:   "What file name to be out",
+		Value:   "permission",
+	},
+	&cli.StringFlag{
+		Name:  formatFlag,
+		Usage: "What format to be output. [*json/yaml]",
+		Value: "json",
 	},
 }
 
@@ -53,11 +57,10 @@ func main() {
 	app.Usage = "Automatically gen GRBAC configure json for Go project."
 	app.Commands = []*cli.Command{ // app 注册子命令
 		{
-			Name:    "init",
-			Aliases: []string{"i"},
-			Usage:   "Create permission.json",
-			Action:  initAction, // 子命令的动作
-			Flags:   initFlags,
+			Name:   "init",
+			Usage:  "Create permission.json",
+			Action: initAction, // 子命令的动作
+			Flags:  initFlags,
 		},
 	}
 
@@ -68,10 +71,11 @@ func main() {
 
 func initAction(c *cli.Context) error {
 	return gen.New().Build(&gen.Config{
-		SearchDir:  c.String(searchDirFlag),
-		OutputDir:  c.String(outputDirFlag),
-		ParseDepth: c.Int(parseDepthFlag),
-		MainFile:   c.String(mainFileFlag),
-		OutputVar:  c.String(outputVarFlag),
+		SearchDir:    c.String(searchDirFlag),
+		OutputDir:    c.String(outputDirFlag),
+		ParseDepth:   c.Int(parseDepthFlag),
+		ExcludeFiles: c.StringSlice(excludeFilesFlag),
+		OutputFile:   c.String(outputFileFlag),
+		Format:       c.String(formatFlag),
 	})
 }

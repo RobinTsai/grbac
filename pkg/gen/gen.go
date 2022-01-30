@@ -1,27 +1,28 @@
 package gen
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"grbac-gen/pkg/parser"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
-	"text/template"
 )
 
 type Gen struct {
 	json func(data interface{}) ([]byte, error)
+	yaml func(data interface{}) ([]byte, error)
 }
 
 type Config struct {
-	SearchDir  string
-	OutputDir  string
-	ParseDepth int
-	MainFile   string
-	OutputVar  string
+	SearchDir    string
+	OutputDir    string
+	ParseDepth   int
+	ExcludeFiles []string
+	OutputFile   string
+	Format       string
 }
 
 func New() *Gen {
@@ -29,11 +30,14 @@ func New() *Gen {
 		json: func(data interface{}) ([]byte, error) {
 			return json.MarshalIndent(data, "", "    ")
 		},
+		yaml: func(data interface{}) ([]byte, error) {
+			return nil, nil
+			// return yml.Unmarshal()
+		},
 	}
 }
 
 func (g *Gen) Build(config *Config) error {
-	// check dir exists
 	if _, err := os.Stat(config.SearchDir); os.IsNotExist(err) {
 		return fmt.Errorf("dir: %s does not exist", config.SearchDir)
 	}
@@ -41,16 +45,17 @@ func (g *Gen) Build(config *Config) error {
 		return fmt.Errorf("dir: %s does not exist", config.OutputDir)
 	}
 
-	// get pkg name
-	pkgName, err := getPkgName(config.SearchDir)
+	rootPkgName, err := getPkgName(config.SearchDir)
 	if err != nil {
 		log.Fatalln("Failed get pkg name: " + err.Error())
 	}
-	log.Println("[DEBUG] get pkg name is", pkgName)
 
-	p := parser.New()
-	log.Println("Parsing all go files...")
-	if err = p.ParseAllGoFiles(pkgName, config.SearchDir); err != nil {
+	p := parser.New(
+		parser.SetExcludeFiles(config.ExcludeFiles),
+	)
+
+	log.Println("Parse all go files...")
+	if err = p.ParseAllGoFiles(rootPkgName, config.SearchDir); err != nil {
 		return err
 	}
 
@@ -59,44 +64,46 @@ func (g *Gen) Build(config *Config) error {
 		return err
 	}
 
-	log.Println("Output json...")
-	content := new(bytes.Buffer)
-	if content, err = p.GetPermissions(); err != nil {
-		return err
-	}
+	permissions := p.GetPermissions()
 
-	arr := strings.Split(config.OutputDir, "/")
-	fileConfig := &FileConfig{
-		PkgName:   arr[len(arr)-1],
-		OutputVar: config.OutputVar,
-		Content:   content,
-	}
-	if err = g.Output(fileConfig); err != nil {
+	log.Println("Output file...")
+	fullfile, err := g.Output(config, permissions)
+	if err != nil {
 		return err
 	}
+	log.Println("file: " + fullfile)
 
 	return nil
 }
 
-func (g *Gen) Output(fileConf *FileConfig) error {
-	if g.json == nil {
-		return fmt.Errorf("nil Parser.json")
+func (g *Gen) Output(config *Config, data []*parser.Permission) (string, error) {
+	var (
+		byts []byte
+		err  error
+	)
+	filename := ""
+	switch config.Format {
+	case "json":
+		filename = config.OutputFile + ".json"
+		byts, err = g.json(data)
+	case "yaml":
+		// TODO: ...
+		fmt.Println("yaml TODO: ...")
 	}
 
-	arr := strings.Split(fileConf.PkgName, "/")
-	fileConf.PkgName = arr[len(arr)-1]
-
-	f, err := os.Create("permission")
+	dir, err := filepath.Abs(config.OutputDir)
 	if err != nil {
-		return err
+		fmt.Println("------------ err dir")
 	}
-
-	t, err := template.New("permission_info").Parse(tempStr)
+	fullDir := filepath.Join(dir, filename)
+	f, err := os.Create(fullDir)
 	if err != nil {
-		return err
+		return "", err
 	}
+	defer f.Close()
 
-	return t.ExecuteTemplate(f, "permission_info", fileConf)
+	_, err = f.Write(byts)
+	return fullDir, err
 }
 
 func getPkgName(searchDir string) (string, error) {

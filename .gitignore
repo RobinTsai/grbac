@@ -3,3 +3,6 @@
 .idea
 go.sum
 grbac-gen
+permission.json
+permission.yaml
+permission

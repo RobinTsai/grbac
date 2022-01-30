@@ -44,12 +44,14 @@ func (p *Permission) Parse() error {
 // @Router       /admin/users [get]
 var routerPattern = regexp.MustCompile(`^(/[\w./\-{}+:$]*)[[:blank:]]+\[(\w+)]`)
 
+var routerRegex = regexp.MustCompile(`\{.*}`)
+
 func (p *Permission) parseRouterLine() error {
 	matches := routerPattern.FindStringSubmatch(p.RawRouterLine)
 	if len(matches) != 3 {
 		return fmt.Errorf("can not parse router comment \"%s\"", p.RawRouterLine)
 	}
-	p.Path = matches[1]
+	p.Path = string(routerRegex.ReplaceAll([]byte(matches[1]), []byte("*")))
 	p.Method = strings.ToUpper(matches[2])
 
 	return nil

@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	goparser "go/parser"
@@ -20,9 +18,10 @@ const (
 )
 
 type Parser struct {
-	packages    map[string]*PackageDefinition
-	permissions []*Permission
-	json        *strings.Builder
+	packages     map[string]*PackageDefinition
+	permissions  []*Permission
+	json         *strings.Builder
+	excludeFiles []string
 }
 
 type PackageDefinition struct {
@@ -47,11 +46,11 @@ func (p *Parser) Skip(path string, f os.FileInfo) bool {
 	return false
 }
 
-func (p *Parser) CollectAstFile(pkgKey, path string, astFile *ast.File) error {
+func (p *Parser) CollectAstFile(pkgName, path string, astFile *ast.File) error {
 	if p.packages == nil {
 		p.packages = make(map[string]*PackageDefinition)
 	}
-	if pkgKey == "" {
+	if pkgName == "" {
 		return nil
 	}
 
@@ -60,7 +59,7 @@ func (p *Parser) CollectAstFile(pkgKey, path string, astFile *ast.File) error {
 		return err
 	}
 
-	pd, ok := p.packages[pkgKey]
+	pd, ok := p.packages[pkgName]
 	if ok {
 		_, exists := pd.Files[path]
 		if exists {
@@ -68,7 +67,7 @@ func (p *Parser) CollectAstFile(pkgKey, path string, astFile *ast.File) error {
 		}
 		pd.Files[path] = astFile
 	} else {
-		p.packages[pkgKey] = &PackageDefinition{
+		p.packages[pkgName] = &PackageDefinition{
 			Name:  astFile.Name.Name,
 			Files: map[string]*ast.File{path: astFile},
 		}
@@ -77,7 +76,7 @@ func (p *Parser) CollectAstFile(pkgKey, path string, astFile *ast.File) error {
 	return nil
 }
 
-func (p *Parser) ParseFile(pkgKey, path string, src interface{}) error {
+func (p *Parser) ParseFile(pkgName, path string, src interface{}) error {
 	if strings.HasSuffix(strings.ToLower(path), "_test.go") || filepath.Ext(path) != ".go" {
 		return nil
 	}
@@ -87,16 +86,16 @@ func (p *Parser) ParseFile(pkgKey, path string, src interface{}) error {
 		return err
 	}
 
-	if err = p.CollectAstFile(pkgKey, path, astFile); err != nil {
+	if err = p.CollectAstFile(pkgName, path, astFile); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func New(options ...func(*Parser)) *Parser { // 这种 options 传入的设计方法
+func New(options ...func(*Parser)) *Parser {
 	p := &Parser{
-		packages:    make(map[string]*PackageDefinition), // NewPackagesDefinitions(),
+		packages:    make(map[string]*PackageDefinition), // key: pkg full name
 		permissions: make([]*Permission, 0, 30),
 		json:        &strings.Builder{},
 	}
@@ -107,27 +106,27 @@ func New(options ...func(*Parser)) *Parser { // 这种 options 传入的设计�
 	return p
 }
 
-func (p *Parser) ParseAllGoFiles(pkgName, searchDir string) error {
+func (p *Parser) ParseAllGoFiles(rootPkgName, searchDir string) error {
 	return filepath.Walk(searchDir, func(path string, info fs.FileInfo, err error) error {
-		if skipped := p.Skip(pkgName, info); skipped {
+		if skipped := p.Skip(rootPkgName, info); skipped {
 			return nil
 		}
 		if info.IsDir() {
 			return nil
 		}
 
-		relPath, err := filepath.Rel(searchDir, path) // 为什么要获取 relative path 呢？是为了
+		relPath, err := filepath.Rel(searchDir, path) // 为什么要获取 relative path 呢？是为了生成包地址（就是 import 的地址）
 		if err != nil {
 			return err
 		}
 
 		// 统一 path 的 key
-		s1 := filepath.Join(pkgName, relPath) // pkgName 相当于根包路径，再结合相对路径，拼出来目的包的路径
-		s2 := filepath.Clean(s1)              // 尽量简化目录
-		s3 := filepath.Dir(s2)                // 获取目录
-		pathKey := filepath.ToSlash(s3)       // 将不同系统的 Separator 替换成 /
+		s1 := filepath.Join(rootPkgName, relPath) // pkgName 相当于根包路径，再结合相对路径，拼出来目的包的路径
+		s2 := filepath.Clean(s1)                  // 尽量简化目录
+		s3 := filepath.Dir(s2)                    // 获取目录
+		pkgName := filepath.ToSlash(s3)           // 将不同系统的 Separator 替换成 /
 
-		if err = p.ParseFile(pathKey, path, nil); err != nil {
+		if err = p.ParseFile(pkgName, path, nil); err != nil {
 			return err
 		}
 
@@ -177,8 +176,8 @@ func (p *Parser) GenPermissions() error {
 	return nil
 }
 
-func (p *Parser) GetPermissions() (*bytes.Buffer, error) {
-	for i, permission := range p.permissions {
+func (p *Parser) GetPermissions() []*Permission {
+	for i, permission := range p.permissions { // ptr
 		permission.Id = i
 		if permission.Host == "" {
 			permission.Host = "*"
@@ -189,12 +188,5 @@ func (p *Parser) GetPermissions() (*bytes.Buffer, error) {
 		permission.Method = fmt.Sprintf("{%s}", permission.Method)
 	}
 
-	writer := &bytes.Buffer{}
-	encoder := json.NewEncoder(writer)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(p.permissions); err != nil {
-		return nil, err
-	}
-
-	return writer, nil
+	return p.permissions
 }
