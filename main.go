@@ -15,6 +15,8 @@ const (
 	excludeFilesFlag = "excludeFiles"
 	outputFileFlag   = "output"
 	formatFlag       = "format"
+	tagFlag          = "tag"
+	ssRoleFlag       = "ssRole"
 )
 
 var initFlags = []cli.Flag{
@@ -49,6 +51,15 @@ var initFlags = []cli.Flag{
 		Usage: "What format to be output. [*json/yaml]",
 		Value: "json",
 	},
+	&cli.StringFlag{
+		Name:     tagFlag,
+		Usage:    "What tag",
+		Required: true,
+	},
+	&cli.StringFlag{
+		Name:  ssRoleFlag,
+		Usage: "Set Super-Super-Role who has all permissions",
+	},
 }
 
 func main() {
@@ -77,5 +88,6 @@ func initAction(c *cli.Context) error {
 		ExcludeFiles: c.StringSlice(excludeFilesFlag),
 		OutputFile:   c.String(outputFileFlag),
 		Format:       c.String(formatFlag),
+		Tag:          c.String(tagFlag),
 	})
 }

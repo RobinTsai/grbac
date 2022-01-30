@@ -23,6 +23,8 @@ type Config struct {
 	ExcludeFiles []string
 	OutputFile   string
 	Format       string
+	Tag          string
+	Ssrole       string
 }
 
 func New() *Gen {
@@ -52,6 +54,8 @@ func (g *Gen) Build(config *Config) error {
 
 	p := parser.New(
 		parser.SetExcludeFiles(config.ExcludeFiles),
+		parser.SetTag(config.Tag),
+		parser.SetSsrole(config.Ssrole),
 	)
 
 	log.Println("Parse all go files...")

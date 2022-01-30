@@ -5,7 +5,9 @@ import (
 	"go/ast"
 	goparser "go/parser"
 	"go/token"
+	"grbac-gen/pkg/utils"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +17,7 @@ const (
 	attrRouter    = "@router"
 	attrAuthRoles = "@authroles"
 	attrForbRoles = "@forbiddenroles"
+	attrTags      = "@tags"
 )
 
 type Parser struct {
@@ -22,6 +25,8 @@ type Parser struct {
 	permissions  []*Permission
 	json         *strings.Builder
 	excludeFiles []string
+	tag          string
+	ssRole       string
 }
 
 type PackageDefinition struct {
@@ -30,6 +35,7 @@ type PackageDefinition struct {
 }
 
 // NewPkgBuild
+// @tags abc,ad,Abc,de,,
 // @Router       /admin/rent/{rentId}/app-bind-skill [post]
 // @AuthRoles	 SuperAdministrator,Administrator
 
@@ -162,13 +168,20 @@ func (p *Parser) GenPermissions() error {
 						permission.RawAuthRolesLine = info
 					case attrForbRoles:
 						permission.RawForbiddenRolesLine = info
+					case attrTags:
+						tags := strings.Split(strings.ReplaceAll(info, ",", " "), " ")
+						permission.Tags = utils.UniqueStrings(tags, false, strings.TrimSpace, strings.ToLower)
 					}
 				}
 
-				if err := permission.Parse(); err != nil {
+				if p.tag != "" && !utils.Contains(permission.Tags, p.tag) {
 					continue
 				}
 
+				if err := permission.Parse(); err != nil {
+					log.Println("parse permission err" + err.Error())
+					continue
+				}
 				p.permissions = append(p.permissions, permission)
 			}
 		}

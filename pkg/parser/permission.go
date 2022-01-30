@@ -19,11 +19,12 @@ type PermissionDoc struct {
 
 type Permission struct {
 	*PermissionDoc
-	Pkg                   string `json:"pkg"`
-	Filepath              string `json:"filepath"`
-	RawRouterLine         string `json:"rawRouterLine"`
-	RawAuthRolesLine      string `json:"rawAuthRolesLine"`
-	RawForbiddenRolesLine string `json:"rawForbiddenRolesLine"`
+	Pkg                   string   `json:"pkg"`
+	Filepath              string   `json:"filepath"`
+	RawRouterLine         string   `json:"rawRouterLine"`
+	RawAuthRolesLine      string   `json:"rawAuthRolesLine"`
+	RawForbiddenRolesLine string   `json:"rawForbiddenRolesLine"`
+	Tags                  []string `json:"-"`
 }
 
 func (p *Permission) Parse() error {
@@ -51,6 +52,7 @@ func (p *Permission) parseRouterLine() error {
 	if len(matches) != 3 {
 		return fmt.Errorf("can not parse router comment \"%s\"", p.RawRouterLine)
 	}
+
 	p.Path = string(routerRegex.ReplaceAll([]byte(matches[1]), []byte("*")))
 	p.Method = strings.ToUpper(matches[2])
 
