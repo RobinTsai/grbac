@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"grbac-gen/pkg/parser"
+	"grbac-gen/pkg/utils"
 	"log"
 	"os"
 	"os/exec"
@@ -24,7 +25,7 @@ type Config struct {
 	OutputFile   string
 	Format       string
 	Tag          string
-	Ssrole       string
+	SsRole       string
 }
 
 func New() *Gen {
@@ -55,7 +56,7 @@ func (g *Gen) Build(config *Config) error {
 	p := parser.New(
 		parser.SetExcludeFiles(config.ExcludeFiles),
 		parser.SetTag(config.Tag),
-		parser.SetSsrole(config.Ssrole),
+		parser.SetSsrole(config.SsRole),
 	)
 
 	log.Println("Parse all go files...")
@@ -85,6 +86,16 @@ func (g *Gen) Output(config *Config, data []*parser.Permission) (string, error) 
 		byts []byte
 		err  error
 	)
+	if config.SsRole != "" { // TODO: 验证是否可以通过一个 permission 添加超级管理员（所有的维度都是星号）
+		for _, p := range data {
+			if p.PermissionDoc == nil {
+				continue
+			}
+			if !utils.Contains(p.PermissionDoc.AuthorizedRoles, config.SsRole) {
+				p.PermissionDoc.AuthorizedRoles = append(p.PermissionDoc.AuthorizedRoles, config.SsRole)
+			}
+		}
+	}
 	filename := ""
 	switch config.Format {
 	case "json":

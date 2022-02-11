@@ -89,5 +89,6 @@ func initAction(c *cli.Context) error {
 		OutputFile:   c.String(outputFileFlag),
 		Format:       c.String(formatFlag),
 		Tag:          c.String(tagFlag),
+		SsRole:       c.String(ssRoleFlag),
 	})
 }

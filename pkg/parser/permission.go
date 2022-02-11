@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -29,6 +30,7 @@ type Permission struct {
 
 func (p *Permission) Parse() error {
 	if p.RawRouterLine == "" {
+		log.Println("empty permission raw ")
 		return fmt.Errorf("empty permission raw router line")
 	}
 

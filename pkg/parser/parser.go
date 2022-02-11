@@ -17,7 +17,7 @@ const (
 	attrRouter    = "@router"
 	attrAuthRoles = "@authroles"
 	attrForbRoles = "@forbiddenroles"
-	attrTags      = "@tags"
+	attrTags      = "@permissiontags"
 )
 
 type Parser struct {
@@ -35,7 +35,7 @@ type PackageDefinition struct {
 }
 
 // NewPkgBuild
-// @tags abc,ad,Abc,de,,
+// @PermissionTags abc,ad,Abc,de,,
 // @Router       /admin/rent/{rentId}/app-bind-skill [post]
 // @AuthRoles	 SuperAdministrator,Administrator
 
