@@ -47,7 +47,7 @@ func (p *Permission) Parse() error {
 // @Router       /admin/users [get]
 var routerPattern = regexp.MustCompile(`^(/[\w./\-{}+:$]*)[[:blank:]]+\[(\w+)]`)
 
-var routerRegex = regexp.MustCompile(`\{.*}`)
+var routerRegex = regexp.MustCompile(`\{[^{]*}`)
 
 func (p *Permission) parseRouterLine() error {
 	matches := routerPattern.FindStringSubmatch(p.RawRouterLine)
