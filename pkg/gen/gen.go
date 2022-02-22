@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -26,6 +27,7 @@ type Config struct {
 	Format       string
 	Tag          string
 	SsRole       string
+	Tidy         bool
 }
 
 func New() *Gen {
@@ -71,6 +73,8 @@ func (g *Gen) Build(config *Config) error {
 
 	permissions := p.GetPermissions()
 
+	sort.Sort(parser.PS(permissions))
+
 	log.Println("Output file...")
 	fullfile, err := g.Output(config, permissions)
 	if err != nil {
@@ -94,7 +98,12 @@ func (g *Gen) Output(config *Config, data []*parser.Permission) (string, error) 
 			if !utils.Contains(p.PermissionDoc.AuthorizedRoles, config.SsRole) {
 				p.PermissionDoc.AuthorizedRoles = append(p.PermissionDoc.AuthorizedRoles, config.SsRole)
 			}
+			// 如果设置了 ssRole，不再使用星号
+			p.PermissionDoc.AuthorizedRoles = utils.Remove(p.PermissionDoc.AuthorizedRoles, "*")
 		}
+	}
+	if config.Tidy {
+
 	}
 	filename := ""
 	switch config.Format {
@@ -104,11 +113,13 @@ func (g *Gen) Output(config *Config, data []*parser.Permission) (string, error) 
 	case "yaml":
 		// TODO: ...
 		fmt.Println("yaml TODO: ...")
+		os.Exit(1)
 	}
 
 	dir, err := filepath.Abs(config.OutputDir)
 	if err != nil {
-		fmt.Println("------------ err dir")
+		fmt.Println("------------ err output dir")
+		os.Exit(1)
 	}
 	fullDir := filepath.Join(dir, filename)
 	f, err := os.Create(fullDir)

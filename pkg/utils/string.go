@@ -41,3 +41,15 @@ func Contains(ss []string, s string) bool {
 	}
 	return false
 }
+
+// Remove ...
+func Remove(ss []string, s string) []string {
+Again:
+	for i, s2 := range ss {
+		if s == s2 {
+			ss = append(ss[0:i], ss[i+1:]...)
+			goto Again
+		}
+	}
+	return ss
+}

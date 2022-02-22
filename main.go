@@ -17,6 +17,7 @@ const (
 	formatFlag       = "format"
 	tagFlag          = "tag"
 	ssRoleFlag       = "ssRole"
+	tidyFlag         = "tidy"
 )
 
 var initFlags = []cli.Flag{
@@ -60,6 +61,10 @@ var initFlags = []cli.Flag{
 		Name:  ssRoleFlag,
 		Usage: "Set Super-Super-Role who has all permissions",
 	},
+	&cli.BoolFlag{
+		Name:  tidyFlag,
+		Usage: "tidy and compress rules",
+	},
 }
 
 func main() {
@@ -90,5 +95,6 @@ func initAction(c *cli.Context) error {
 		Format:       c.String(formatFlag),
 		Tag:          c.String(tagFlag),
 		SsRole:       c.String(ssRoleFlag),
+		Tidy:         c.Bool(tidyFlag),
 	})
 }
