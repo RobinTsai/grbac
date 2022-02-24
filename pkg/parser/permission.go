@@ -3,6 +3,7 @@ package parser
 import (
 	"encoding/json"
 	"fmt"
+	"grbac-gen/pkg/utils"
 	"log"
 	"regexp"
 	"strings"
@@ -16,6 +17,22 @@ type PermissionDoc struct {
 	AuthorizedRoles []string `json:"authorized_roles"` //
 	ForbiddenRoles  []string `json:"forbidden_roles"`
 	AllowAnyone     bool     `json:"allow_anyone"`
+
+	Methods               []string `json:"-"` // 临时使用
+	PermKey               string   `json:"-"` // +acc_roles-deny_roles
+	Frags                 []string `json:"-"` //
+	SameFragCountWithLast int      `json:"-"` // if key 不一样 0
+}
+
+func (p *PermissionDoc) GetMethodsFromMethodStr() []string {
+	s := strings.TrimPrefix(p.Method, "{")
+	s = strings.TrimSuffix(s, "}")
+	return strings.Split(s, ",")
+}
+func (p *PermissionDoc) SetMethodFromMethods() {
+	p.Methods = utils.UniqueStrings(p.Methods, false)
+	s := strings.Join(p.Methods, ",")
+	p.Method = "{" + s + "}"
 }
 
 type Permission struct {

@@ -103,8 +103,9 @@ func (g *Gen) Output(config *Config, data []*parser.Permission) (string, error) 
 		}
 	}
 	if config.Tidy {
-
+		data = parser.AggregatePath(data)
 	}
+
 	filename := ""
 	switch config.Format {
 	case "json":
